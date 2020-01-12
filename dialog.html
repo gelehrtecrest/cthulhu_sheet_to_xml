@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <script type='text/javascript'>    
+      window.onload = function(){
+        handleDownload();
+      }
+      function handleDownload() {
+        var content = <?= getData(); ?>;
+        var blob = new Blob([ content ], { "type" : "text/xml"});
+        var link = document.createElement('a');
+        link.download = <?= getFileName(); ?>;
+        link.href = window.URL.createObjectURL(blob);
+        link.click();
+        google.script.host.close();
+      }
+  </script>
+  </head>
+</html>
+
