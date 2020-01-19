@@ -3,6 +3,7 @@ function udonariumXmlDownload() {
   SpreadsheetApp.getUi().showModalDialog(html, "Now Downloading..");
 }
 
+var chat = "";
 
 function getData() {
   //データ読み込み
@@ -13,23 +14,34 @@ function getData() {
   var data_character = getXml_character();
   var data_detail = getXml_detail();
   
-  
+  //チャットパレットの初期化
+  init_chat();
   //offset,end計算
   var common_offset = getOffset_common(data);
   var common_end = getEnd_common(data);
   var info_offset = getOffset_info(data);
   var info_end = getEnd_info(data);
+  var ability_offset = getOffset_ability(data);
+  var ability_end = getEnd_ability(data);
+  var skill_offset = getOffset_skill(data);
+  var skill_end = getEnd_skill(data);
   
   //データ取り込み
   var data_common = getXml_data_common(data, common_offset, common_end);
   var data_info = getXml_data_info(data, info_offset, info_end);
-  
+  var data_ability = getXml_data_ability(data, ability_offset, ability_end);
+  var data_skill = getXml_data_skill(data, skill_offset, skill_end);
+  var data_chat = getXml_data_chat();
+
   
   //XMLデータ積み込み
   data_character.addContent(data_common);
   data_detail.addContent(data_info);
+  data_detail.addContent(data_ability);
+  data_detail.addContent(data_skill);
   data_character.addContent(data_detail);
   root.addContent(data_character);
+  root.addContent(data_chat);
 
   //XMLテキスト出力
   var document = XmlService.createDocument(root);
@@ -146,6 +158,63 @@ function getXml_data_info(data, offset, end){
   return data_info;
 }
 
+//能力
+function getXml_data_ability(data, offset, end){
+  if(offset < 0 || end < 0){
+    return null;
+  }
+  
+  var data_ability = XmlService.createElement('data')
+  .setAttribute("name", "リソース");
+  //能力
+  for(var i=offset;i<end;i++){
+    var name = data[i][0];
+    var value = data[i][4];
+    if(name!=""){
+      var data_name = XmlService.createElement('data')
+      .setAttribute("type", "numberResource")
+      .setAttribute("currentValue", value)
+      .setAttribute("name", name);
+      data_name.setText(value);
+      data_ability.addContent(data_name);
+    }
+  }
+  
+  return data_ability;
+}
+
+//技能
+function getXml_data_skill(data, offset, end){
+  if(offset < 0 || end < 0){
+    return null;
+  }
+  
+  var data_skill = XmlService.createElement('data')
+  .setAttribute("name", "戦闘技能");
+  //技能
+  for(var i=offset;i<end;i++){
+    var name = data[i][0];
+    var value = data[i][5];
+    if(name!=""){
+      var data_name = XmlService.createElement('data')
+      .setAttribute("name", name);
+      data_name.setText(value);
+      data_skill.addContent(data_name);
+      chat += '\nCC<={' + name + '}  :' + name;
+    }
+  }
+  
+  return data_skill;
+}
+
+//チャットパレット
+function getXml_data_chat(){
+  var data_chat = XmlService.createElement('chat-palette')
+  .setAttribute("dicebot", "Cthulhu7th");
+  data_chat.setText(chat);
+  return data_chat;
+}
+
 //-----------------------------------------------------------------------------
 //offset
 //offset_common
@@ -170,6 +239,27 @@ function getOffset_info(data){
   return -1;
 }
 
+//offset_ability
+function getOffset_ability(data){
+  for(var i=0;i<data.length;i++){
+    var name = data[i][0];
+    if(name == "能力値"){
+      return i+1;
+    }
+  }
+  return -1;
+}
+
+//offset_skill
+function getOffset_skill(data){
+  for(var i=0;i<data.length;i++){
+    var name = data[i][0];
+    if(name == "技能名"){
+      return i+1;
+    }
+  }
+  return -1;
+}
 
 //end
 //end_common
@@ -194,15 +284,31 @@ function getEnd_info(data){
   return -1;
 }
 
-//end_info
-function getEnd_info(data){
+//end_ability
+function getEnd_ability(data){
   for(var i=0;i<data.length;i++){
     var name = data[i][0];
-    if(name == "能力値"){
+    if(name == "技能"){
       return i;
     }
   }
   return -1;
+}
+
+//end_skill
+function getEnd_skill(data){
+  for(var i=0;i<data.length;i++){
+    var name = data[i][0];
+    if(name == "戦闘"){
+      return i;
+    }
+  }
+  return -1;
+}
+
+//-----------------------------------------------------------------------------
+function init_chat(){
+  chat = "CC<={SAN}  :SANチェック \n現在SAN値 {SAN値} \n\n//-----神話技能\nCC<={クトゥルフ神話技能}  :クトゥルフ神話技能\n\n//-----技能\n";
 }
 
 //-----------------------------------------------------------------------------
