@@ -4,6 +4,7 @@ function udonariumXmlDownload() {
 }
 
 var chat = "";
+var db = "";
 
 function getData() {
   //データ読み込み
@@ -17,28 +18,48 @@ function getData() {
   //チャットパレットの初期化
   init_chat();
   //offset,end計算
-  var common_offset = getOffset_common(data);
-  var common_end = getEnd_common(data);
-  var info_offset = getOffset_info(data);
-  var info_end = getEnd_info(data);
-  var ability_offset = getOffset_ability(data);
-  var ability_end = getEnd_ability(data);
-  var skill_offset = getOffset_skill(data);
-  var skill_end = getEnd_skill(data);
-  
+  var common_offset = getOffset(data, '基本情報');
+  var common_end = getEnd(data, '能力値');
+  var info_offset = getOffset(data, '基本情報');
+  var info_end = getEnd(data, '能力値');
+  var ability_offset = getOffset(data, '能力値');
+  var ability_end = getEnd(data, '技能名');
+  var skill_offset = getOffset(data, '技能');
+  var skill_end = getEnd(data, '戦闘');
+  var battle_offset = getOffset(data, '戦闘');
+  var battle_end = getEnd(data, '武器');
+  var weapon_offset = getOffset(data, '武器');
+  var weapon_end = getEnd(data, 'バックストーリー');
+  var bs_offset = getOffset(data, 'バックストーリー');
+  var bs_end = getEnd(data, '装備品と所持品');
+  var equip_offset = getOffset(data, '装備品と所持品');
+  var equip_end = getEnd(data, '収入と財産');
+  var money_offset = getOffset(data, '収入と財産');
+
   //データ取り込み
+  var data_image = getXml_data_image();
   var data_common = getXml_data_common(data, common_offset, common_end);
   var data_info = getXml_data_info(data, info_offset, info_end);
   var data_ability = getXml_data_ability(data, ability_offset, ability_end);
   var data_skill = getXml_data_skill(data, skill_offset, skill_end);
+  var data_battle = getXml_data_battle(data, battle_offset, battle_end);
+  var data_weapon = getXml_data_weapon(data, weapon_offset, weapon_end);
+  var data_bs = getXml_data_bs(data, bs_offset, bs_end);
+  var data_equip = getXml_data_equip(data, equip_offset, equip_end);
+  var data_money = getXml_data_money(data, money_offset);
   var data_chat = getXml_data_chat();
 
-  
   //XMLデータ積み込み
+  data_character.addContent(data_image);
   data_character.addContent(data_common);
   data_detail.addContent(data_info);
   data_detail.addContent(data_ability);
   data_detail.addContent(data_skill);
+  data_detail.addContent(data_battle);
+  data_detail.addContent(data_weapon);
+  data_detail.addContent(data_bs);
+  data_detail.addContent(data_equip);
+  data_detail.addContent(data_money);
   data_character.addContent(data_detail);
   root.addContent(data_character);
   root.addContent(data_chat);
@@ -67,6 +88,17 @@ function getXml_character(){
   var data_character = XmlService.createElement('data')
   .setAttribute("name", "character");
   return data_character;
+}
+
+//image
+function getXml_data_image(){
+  var data_image = XmlService.createElement('data')
+  .setAttribute("name", "image");
+  var data_name = XmlService.createElement('data')
+  .setAttribute("type", "image")
+  .setAttribute("name", "imageIdentifier");
+  data_image.addContent(data_name);
+  return data_image;
 }
 
 //基本情報
@@ -207,6 +239,140 @@ function getXml_data_skill(data, offset, end){
   return data_skill;
 }
 
+//戦闘
+function getXml_data_battle(data, offset, end){
+  if(offset < 0 || end < 0){
+    return null;
+  }
+  
+  var data_battle = XmlService.createElement('data')
+  .setAttribute("name", "戦闘");
+  //戦闘
+  for(var i=offset;i<end;i++){
+    var name = data[i][0];
+    var value = data[i][1];
+    if(name!="" && name!="回避"){
+      var data_name = XmlService.createElement('data')
+      .setAttribute("name", name);
+      data_name.setText(value);
+      data_battle.addContent(data_name);
+      if(name="ダメージボーナス"){
+        db = value;
+      }
+    }
+  }
+  
+  return data_battle;
+}
+
+//武器
+function getXml_data_weapon(data, offset, end){
+  if(offset < 0 || end < 0){
+    return null;
+  }
+  chat += '\n\n//-----武器威力判定\n'
+  var data_weapon = XmlService.createElement('data')
+  .setAttribute("name", "武器");
+  //武器
+  for(var i=offset;i<end;i++){
+    var name = data[i][0];
+    var value = data[i][4];
+    if(name!=""){
+      var value_str = value.toString().replace('\+DB', db);
+      var data_name = XmlService.createElement('data')
+      .setAttribute("name", name);
+      data_name.setText(value_str);
+      data_weapon.addContent(data_name);
+      chat += '\n' + value_str + ' :' + name;
+    }
+  }
+  
+  return data_weapon;
+}
+
+//バックストーリー
+function getXml_data_bs(data, offset, end){
+  if(offset < 0 || end < 0){
+    return null;
+  }
+  
+  var data_bs = XmlService.createElement('data')
+  .setAttribute("name", "バックストーリー");
+  //バックストーリー
+  for(var i=offset;i<end;i++){
+    var name = data[i][0];
+    if(!(name=="")){
+      var data_name = XmlService.createElement('data')
+      .setAttribute("type", "note")
+      .setAttribute("name", name);
+      var value = ""
+      for(var j = 1;data[i][j] != "";j++){
+        if(value == ""){
+          value = data[i][j];
+        } else {
+          value = value + "\n" + data[i][j];
+        }
+      }
+      data_name.setText(value);
+      data_bs.addContent(data_name);
+    }
+  }
+  
+  return data_bs;
+}
+
+//装備品と所持品
+function getXml_data_equip(data, offset, end){
+  if(offset < 0 || end < 0){
+    return null;
+  }
+  
+  var data_equip = XmlService.createElement('data')
+  .setAttribute("name", "装備品と所持品");
+  //装備品と所持品
+  for(var i=offset;i<end;i++){
+    var name = data[i][0];
+    var value = data[i][1];
+    if(!(name=="")){
+      var data_name = XmlService.createElement('data')
+      .setAttribute("type", "note")
+      .setAttribute("name", name);
+      data_name.setText(value);
+      data_equip.addContent(data_name);
+    }
+  }
+  
+  return data_equip;
+}
+
+//収入と財産
+function getXml_data_money(data, offset){
+  if(offset < 0){
+    return null;
+  }
+  
+  var data_money = XmlService.createElement('data')
+  .setAttribute("name", "収入と財産");
+  //収入と財産
+  for(var i=offset;i<data.length;i++){
+    var name = data[i][0];
+    var value_d = data[i][1];
+    var value_y = data[i][2];
+    if(!(name=="")){
+      var data_name_d = XmlService.createElement('data')
+      .setAttribute("name", name + ' (ドル)');
+      data_name_d.setText(value_d);
+      data_money.addContent(data_name_d);
+      var data_name_y = XmlService.createElement('data')
+      .setAttribute("name", name + ' (円)');
+      data_name_y.setText(value_y);
+      data_money.addContent(data_name_y);
+    }
+  }
+  
+  return data_money;
+}
+
 //チャットパレット
 function getXml_data_chat(){
   var data_chat = XmlService.createElement('chat-palette')
@@ -217,44 +383,10 @@ function getXml_data_chat(){
 
 //-----------------------------------------------------------------------------
 //offset
-//offset_common
-function getOffset_common(data){
+function getOffset(data, key){
   for(var i=0;i<data.length;i++){
     var name = data[i][0];
-    if(name == "基本情報"){
-      return i+1;
-    }
-  }
-  return -1;
-}
-
-//offset_info
-function getOffset_info(data){
-  for(var i=0;i<data.length;i++){
-    var name = data[i][0];
-    if(name == "基本情報"){
-      return i+1;
-    }
-  }
-  return -1;
-}
-
-//offset_ability
-function getOffset_ability(data){
-  for(var i=0;i<data.length;i++){
-    var name = data[i][0];
-    if(name == "能力値"){
-      return i+1;
-    }
-  }
-  return -1;
-}
-
-//offset_skill
-function getOffset_skill(data){
-  for(var i=0;i<data.length;i++){
-    var name = data[i][0];
-    if(name == "技能名"){
+    if(name == key){
       return i+1;
     }
   }
@@ -262,50 +394,15 @@ function getOffset_skill(data){
 }
 
 //end
-//end_common
-function getEnd_common(data){
+function getEnd(data, key){
   for(var i=0;i<data.length;i++){
     var name = data[i][0];
-    if(name == "能力値"){
+    if(name == key){
       return i;
     }
   }
   return -1;
 }
-
-//end_info
-function getEnd_info(data){
-  for(var i=0;i<data.length;i++){
-    var name = data[i][0];
-    if(name == "能力値"){
-      return i;
-    }
-  }
-  return -1;
-}
-
-//end_ability
-function getEnd_ability(data){
-  for(var i=0;i<data.length;i++){
-    var name = data[i][0];
-    if(name == "技能"){
-      return i;
-    }
-  }
-  return -1;
-}
-
-//end_skill
-function getEnd_skill(data){
-  for(var i=0;i<data.length;i++){
-    var name = data[i][0];
-    if(name == "戦闘"){
-      return i;
-    }
-  }
-  return -1;
-}
-
 //-----------------------------------------------------------------------------
 function init_chat(){
   chat = "CC<={SAN}  :SANチェック \n現在SAN値 {SAN値} \n\n//-----神話技能\nCC<={クトゥルフ神話技能}  :クトゥルフ神話技能\n\n//-----技能\n";
