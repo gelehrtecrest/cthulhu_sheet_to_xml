@@ -1,19 +1,44 @@
+var style_udonarium = 1;
+var style_trpg_studio = 2;
+
+//-----------------------------------------------------------------------------
 function udonariumXmlDownload() {
-  var html = HtmlService.createTemplateFromFile("dialog").evaluate();
-  SpreadsheetApp.getUi().showModalDialog(html, "Now Downloading..");
+  var html = HtmlService.createTemplateFromFile("udonarium_dialog").evaluate();
+  SpreadsheetApp.getUi().showModalDialog(html, "Now Downloading a xml file..");
 }
+
+function trpgStudioJsonDownload() {
+  var html = HtmlService.createTemplateFromFile("trpg_studio_dialog").evaluate();
+  SpreadsheetApp.getUi().showModalDialog(html, "Now Downloading a json file..");
+}
+
+//-----------------------------------------------------------------------------
 
 var chat = "";
 var db = "";
 
-function getData() {
+function getDataUdonariumXml() {
   //データ読み込み
   var sheet = SpreadsheetApp.getActiveSheet();
   var data = sheet.getDataRange().getValues();
+  var style = style_udonarium;
+  return getData(style, data);
+}
 
-  var root = getXml_root();
-  var data_character = getXml_character();
-  var data_detail = getXml_detail();
+function getDataTrpgStudioJson() {
+  //データ読み込み
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  var style = style_trpg_studio;
+  return getData(style, data);
+}
+
+//-----------------------------------------------------------------------------
+
+function getData(style, data){
+  var root = get_root(style);
+  var data_character = get_character(style);
+  var data_detail = get_detail(style);
   
   //チャットパレットの初期化
   init_chat();
@@ -23,8 +48,8 @@ function getData() {
   var info_offset = getOffset(data, '基本情報');
   var info_end = getEnd(data, '能力値');
   var ability_offset = getOffset(data, '能力値');
-  var ability_end = getEnd(data, '技能名');
-  var skill_offset = getOffset(data, '技能');
+  var ability_end = getEnd(data, '技能');
+  var skill_offset = getOffset(data, '技能名');
   var skill_end = getEnd(data, '戦闘');
   var battle_offset = getOffset(data, '戦闘');
   var battle_end = getEnd(data, '武器');
@@ -37,42 +62,48 @@ function getData() {
   var money_offset = getOffset(data, '収入と財産');
 
   //データ取り込み
-  var data_image = getXml_data_image();
-  var data_common = getXml_data_common(data, common_offset, common_end);
-  var data_info = getXml_data_info(data, info_offset, info_end);
-  var data_ability = getXml_data_ability(data, ability_offset, ability_end);
-  var data_skill = getXml_data_skill(data, skill_offset, skill_end);
-  var data_battle = getXml_data_battle(data, battle_offset, battle_end);
-  var data_weapon = getXml_data_weapon(data, weapon_offset, weapon_end);
-  var data_bs = getXml_data_bs(data, bs_offset, bs_end);
-  var data_equip = getXml_data_equip(data, equip_offset, equip_end);
-  var data_money = getXml_data_money(data, money_offset);
-  var data_chat = getXml_data_chat();
+  var data_image = get_data_image(style);
+  var data_common = get_data_common(style, data, common_offset, common_end);
+  var data_info = get_data_info(style, data, info_offset, info_end);
+  var data_ability = get_data_ability(style, data, ability_offset, ability_end);
+  var data_skill = get_data_skill(style, data, skill_offset, skill_end);
+  var data_battle = get_data_battle(style, data, battle_offset, battle_end);
+  var data_weapon = get_data_weapon(style, data, weapon_offset, weapon_end);
+  var data_bs = get_data_bs(style, data, bs_offset, bs_end);
+  var data_equip = get_data_equip(style, data, equip_offset, equip_end);
+  var data_money = get_data_money(style, data, money_offset);
+  var data_chat = get_data_chat(style);
 
-  //XMLデータ積み込み
-  data_character.addContent(data_image);
-  data_character.addContent(data_common);
-  data_detail.addContent(data_info);
-  data_detail.addContent(data_ability);
-  data_detail.addContent(data_skill);
-  data_detail.addContent(data_battle);
-  data_detail.addContent(data_weapon);
-  data_detail.addContent(data_bs);
-  data_detail.addContent(data_equip);
-  data_detail.addContent(data_money);
-  data_character.addContent(data_detail);
-  root.addContent(data_character);
-  root.addContent(data_chat);
+  if(style == style_udonarium){
+    //XMLデータ積み込み
+    data_character.addContent(data_image);
+    data_character.addContent(data_common);
+    data_detail.addContent(data_info);
+    data_detail.addContent(data_ability);
+    data_detail.addContent(data_skill);
+    data_detail.addContent(data_battle);
+    data_detail.addContent(data_weapon);
+    data_detail.addContent(data_bs);
+    data_detail.addContent(data_equip);
+    data_detail.addContent(data_money);
+    data_character.addContent(data_detail);
+    root.addContent(data_character);
+    root.addContent(data_chat);
 
-  //XMLテキスト出力
-  var document = XmlService.createDocument(root);
-  var xml = XmlService.getPrettyFormat().format(document);
-  return xml
+    //XMLテキスト出力
+    var document = XmlService.createDocument(root);
+    var xml = XmlService.getPrettyFormat().format(document);
+    return xml
+  } else if(style == style_trpg_studio){
+    return "";
+  } else {
+    return "";
+  }
 }
 
 //-----------------------------------------------------------------------------
 //root
-function getXml_root(){
+function get_root(style){
   var root = XmlService.createElement('character')
   .setAttribute("location.name", "table")
   .setAttribute("location.x","0")
@@ -84,14 +115,14 @@ function getXml_root(){
 }
 
 //character
-function getXml_character(){
+function get_character(style){
   var data_character = XmlService.createElement('data')
   .setAttribute("name", "character");
   return data_character;
 }
 
 //image
-function getXml_data_image(){
+function get_data_image(style){
   var data_image = XmlService.createElement('data')
   .setAttribute("name", "image");
   var data_name = XmlService.createElement('data')
@@ -102,7 +133,7 @@ function getXml_data_image(){
 }
 
 //基本情報
-function getXml_data_common(data, offset){
+function get_data_common(style, data, offset){
   if(offset < 0){
     return null;
   }
@@ -131,7 +162,7 @@ function getXml_data_common(data, offset){
 }
 
 //character
-function getXml_detail(){
+function get_detail(){
   var data_detail = XmlService.createElement('data')
   .setAttribute("name", "detail");
   return data_detail;
@@ -139,7 +170,7 @@ function getXml_detail(){
 
 //getXml
 //情報
-function getXml_data_common(data, offset, end){
+function get_data_common(style, data, offset, end){
   if(offset < 0 || end < 0){
     return null;
   }
@@ -168,7 +199,7 @@ function getXml_data_common(data, offset, end){
 }
 
 //情報
-function getXml_data_info(data, offset, end){
+function get_data_info(style, data, offset, end){
   if(offset < 0 || end < 0){
     return null;
   }
@@ -191,11 +222,12 @@ function getXml_data_info(data, offset, end){
 }
 
 //能力
-function getXml_data_ability(data, offset, end){
+function get_data_ability(style, data, offset, end){
   if(offset < 0 || end < 0){
     return null;
   }
-  
+
+  chat += '\n\n//-----能力\n'
   var data_ability = XmlService.createElement('data')
   .setAttribute("name", "リソース");
   //能力
@@ -209,6 +241,16 @@ function getXml_data_ability(data, offset, end){
       .setAttribute("name", name);
       data_name.setText(value);
       data_ability.addContent(data_name);
+      if(!(name == "SAN値" ||
+           name == "耐久力" ||
+           name == "マジック・ポイント" ||
+           name == "移動率")){
+        if(name == "INT"){
+          chat += '\nCC<={' + name + '}  :' + name + ' / アイデア';
+        } else {
+          chat += '\nCC<={' + name + '}  :' + name;
+        }
+      }
     }
   }
   
@@ -216,13 +258,14 @@ function getXml_data_ability(data, offset, end){
 }
 
 //技能
-function getXml_data_skill(data, offset, end){
+function get_data_skill(style, data, offset, end){
   if(offset < 0 || end < 0){
     return null;
   }
-  
+
+  chat += '\n\n//-----技能\n'
   var data_skill = XmlService.createElement('data')
-  .setAttribute("name", "戦闘技能");
+  .setAttribute("name", "技能");
   //技能
   for(var i=offset;i<end;i++){
     var name = data[i][0];
@@ -240,7 +283,7 @@ function getXml_data_skill(data, offset, end){
 }
 
 //戦闘
-function getXml_data_battle(data, offset, end){
+function get_data_battle(style, data, offset, end){
   if(offset < 0 || end < 0){
     return null;
   }
@@ -266,7 +309,7 @@ function getXml_data_battle(data, offset, end){
 }
 
 //武器
-function getXml_data_weapon(data, offset, end){
+function get_data_weapon(style, data, offset, end){
   if(offset < 0 || end < 0){
     return null;
   }
@@ -291,7 +334,7 @@ function getXml_data_weapon(data, offset, end){
 }
 
 //バックストーリー
-function getXml_data_bs(data, offset, end){
+function get_data_bs(style, data, offset, end){
   if(offset < 0 || end < 0){
     return null;
   }
@@ -322,7 +365,7 @@ function getXml_data_bs(data, offset, end){
 }
 
 //装備品と所持品
-function getXml_data_equip(data, offset, end){
+function get_data_equip(style, data, offset, end){
   if(offset < 0 || end < 0){
     return null;
   }
@@ -346,7 +389,7 @@ function getXml_data_equip(data, offset, end){
 }
 
 //収入と財産
-function getXml_data_money(data, offset){
+function get_data_money(style, data, offset){
   if(offset < 0){
     return null;
   }
@@ -374,7 +417,7 @@ function getXml_data_money(data, offset){
 }
 
 //チャットパレット
-function getXml_data_chat(){
+function get_data_chat(style){
   var data_chat = XmlService.createElement('chat-palette')
   .setAttribute("dicebot", "Cthulhu7th");
   data_chat.setText(chat);
@@ -405,14 +448,23 @@ function getEnd(data, key){
 }
 //-----------------------------------------------------------------------------
 function init_chat(){
-  chat = "CC<={SAN}  :SANチェック \n現在SAN値 {SAN値} \n\n//-----神話技能\nCC<={クトゥルフ神話技能}  :クトゥルフ神話技能\n\n//-----技能\n";
+  chat = "CC<={SAN}  :SANチェック \n現在SAN値 {SAN値} \n\n//-----神話技能\nCC<={クトゥルフ神話技能}  :クトゥルフ神話技能\n\n";
 }
 
 //-----------------------------------------------------------------------------
-function getFileName() {
+function getXmlFileName() {
   var spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = spreadSheet.getActiveSheet();
   var now = new Date();
   var datetime = Utilities.formatDate( now, 'Asia/Tokyo', 'yyyyMMddHHmm');
   return sheet.getName() + '_' + datetime + '.xml';
 }
+
+function getJsonFileName() {
+  var spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadSheet.getActiveSheet();
+  var now = new Date();
+  var datetime = Utilities.formatDate( now, 'Asia/Tokyo', 'yyyyMMddHHmm');
+  return sheet.getName() + '_' + datetime + '.json';
+}
+//-----------------------------------------------------------------------------

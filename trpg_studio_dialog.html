@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <script type='text/javascript'>    
+      window.onload = function(){
+        handleDownload();
+      }
+      function handleDownload() {
+        var content = <?= getDataTrpgStudioJson(); ?>;
+        var blob = new Blob([ content ], { "type" : "text/json"});
+        var link = document.createElement('a');
+        link.download = <?= getJsonFileName(); ?>;
+        link.href = window.URL.createObjectURL(blob);
+        link.click();
+        google.script.host.close();
+      }
+  </script>
+  </head>
+</html>
