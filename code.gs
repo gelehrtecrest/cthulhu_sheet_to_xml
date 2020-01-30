@@ -95,7 +95,18 @@ function getData(style, data){
     var xml = XmlService.getPrettyFormat().format(document);
     return xml
   } else if(style == style_trpg_studio){
-    return "";
+    root["info"] = data_info;
+    var array_forms = []
+    array_forms.push(data_ability);
+    array_forms.push(data_skill);
+    array_forms.push(data_battle);
+    array_forms.push(data_weapon);
+    array_forms.push(data_bs);
+    array_forms.push(data_equip);
+    array_forms.push(data_money);
+    root["array_forms"] = array_forms;
+    json = JSON.stringify(root)
+    return json;
   } else {
     return "";
   }
@@ -104,14 +115,22 @@ function getData(style, data){
 //-----------------------------------------------------------------------------
 //root
 function get_root(style){
-  var root = XmlService.createElement('character')
-  .setAttribute("location.name", "table")
-  .setAttribute("location.x","0")
-  .setAttribute("location.y","0")
-  .setAttribute("posZ","0")
-  .setAttribute("rotate","0")
-  .setAttribute("roll","0");
-  return root;
+  switch(style){
+    case style_udonarium:
+      var root = XmlService.createElement('character')
+      .setAttribute("location.name", "table")
+      .setAttribute("location.x","0")
+      .setAttribute("location.y","0")
+      .setAttribute("posZ","0")
+      .setAttribute("rotate","0")
+      .setAttribute("roll","0");
+      return root;
+    case style_trpg_studio:
+      var root = {};
+      return root;
+    default:
+      return null;
+  }
 }
 
 //character
@@ -130,35 +149,6 @@ function get_data_image(style){
   .setAttribute("name", "imageIdentifier");
   data_image.addContent(data_name);
   return data_image;
-}
-
-//基本情報
-function get_data_common(style, data, offset){
-  if(offset < 0){
-    return null;
-  }
-  //基本情報
-  // 名前
-  var name = data[offset+0][1];
-  // プレイヤー
-  var player = data[offset+1][1];
-  
-  var data_common = XmlService.createElement('data')
-  .setAttribute("name", "common");
-  
-  //name
-  var data_name = XmlService.createElement('data')
-  .setAttribute("name", "name");
-  data_name.setText(name + " / " + player);
-  data_common.addContent(data_name);
-
-  //size
-  var data_size = XmlService.createElement('data')
-  .setAttribute("name", "size");
-  data_size.setText("1");
-  data_common.addContent(data_size);
-
-  return data_common;
 }
 
 //character
@@ -204,20 +194,55 @@ function get_data_info(style, data, offset, end){
     return null;
   }
   
-  var data_info = XmlService.createElement('data')
-  .setAttribute("name", "情報");
+  var data_info = null;
+  switch(style){
+    case style_udonarium:
+      data_info = XmlService.createElement('data')
+      .setAttribute("name", "情報");
+      break;
+    case style_trpg_studio:
+      data_info = {};
+      break;
+  }
+
   //情報
   for(var i=offset;i<end;i++){
     var name = data[i][0];
     var value = data[i][1];
     if(!(name=="" || value=="")){
-      var data_name = XmlService.createElement('data')
-  .setAttribute("name", name);
-      data_name.setText(value);
-      data_info.addContent(data_name);
+      switch(style){
+        case style_udonarium:
+          var data_name = XmlService.createElement('data')
+          .setAttribute("name", name);
+          data_name.setText(value);
+          data_info.addContent(data_name);
+          break;
+        case style_trpg_studio:
+          switch(name){
+            case "名前":
+              data_info["chara_name"] = value;
+              break;
+            case "年齢":
+              data_info["age"] = value;
+              break;
+            case "性別":
+              data_info["sex"] = value;
+              break;
+            case "職業":
+              data_info["job"] = value;
+              break;
+            default:
+              if(data_info["remarks"] == null){
+                data_info["remarks"] = name + ":" + value;
+              } else {
+                data_info["remarks"] += "\n" + name + ":" + value;
+              }
+          }
+        default:
+          break;
+      }
     }
   }
-  
   return data_info;
 }
 
@@ -228,32 +253,54 @@ function get_data_ability(style, data, offset, end){
   }
 
   chat += '\n\n//-----能力\n'
-  var data_ability = XmlService.createElement('data')
-  .setAttribute("name", "リソース");
+  var data_ability = null;
+  switch(style){
+    case style_udonarium:
+      data_ability = XmlService.createElement('data')
+      .setAttribute("name", "リソース");
+      break;
+    case style_trpg_studio:
+      data_ability = {};
+      data_ability["type"] = "charaSheetInputCloneNumber";
+      data_ability["title"] = "リソース";
+      data_ability["forms"] = [];
+      break;
+  }
+
   //能力
   for(var i=offset;i<end;i++){
     var name = data[i][0];
     var value = data[i][4];
     if(name!=""){
-      var data_name = XmlService.createElement('data')
-      .setAttribute("type", "numberResource")
-      .setAttribute("currentValue", value)
-      .setAttribute("name", name);
-      data_name.setText(value);
-      data_ability.addContent(data_name);
-      if(!(name == "SAN値" ||
-           name == "耐久力" ||
-           name == "マジック・ポイント" ||
-           name == "移動率")){
-        if(name == "INT"){
-          chat += '\nCC<={' + name + '}  :' + name + ' / アイデア';
-        } else {
-          chat += '\nCC<={' + name + '}  :' + name;
-        }
+      switch(style){
+        case style_udonarium:
+          var data_name = XmlService.createElement('data')
+          .setAttribute("type", "numberResource")
+          .setAttribute("currentValue", value)
+          .setAttribute("name", name);
+          data_name.setText(value);
+          data_ability.addContent(data_name);
+          if(!(name == "SAN値" ||
+               name == "耐久力" ||
+               name == "マジック・ポイント" ||
+               name == "移動率")){
+            if(name == "INT"){
+              chat += '\nCC<={' + name + '}  :' + name + ' / アイデア';
+            } else {
+              chat += '\nCC<={' + name + '}  :' + name;
+            }
+          }
+          break;
+        case style_trpg_studio:
+          var data_name = {};
+          data_name["text"] = name;
+          data_name["panel"] = false;
+          data_name["number"] = value;
+          data_ability["forms"].push(data_name);
+          break;
       }
     }
   }
-  
   return data_ability;
 }
 
@@ -264,18 +311,40 @@ function get_data_skill(style, data, offset, end){
   }
 
   chat += '\n\n//-----技能\n'
-  var data_skill = XmlService.createElement('data')
-  .setAttribute("name", "技能");
+  var data_skill = null;
+  switch(style){
+    case style_udonarium:
+      data_skill = XmlService.createElement('data')
+      .setAttribute("name", "技能");
+      break;
+    case style_trpg_studio:
+      data_skill = {};
+      data_skill["type"] = "charaSheetInputCloneNumber";
+      data_skill["title"] = "技能";
+      data_skill["forms"] = [];
+      break;
+  }
   //技能
   for(var i=offset;i<end;i++){
     var name = data[i][0];
     var value = data[i][5];
     if(name!=""){
-      var data_name = XmlService.createElement('data')
-      .setAttribute("name", name);
-      data_name.setText(value);
-      data_skill.addContent(data_name);
-      chat += '\nCC<={' + name + '}  :' + name;
+      switch(style){
+        case style_udonarium:
+          var data_name = XmlService.createElement('data')
+          .setAttribute("name", name);
+          data_name.setText(value);
+          data_skill.addContent(data_name);
+          chat += '\nCC<={' + name + '}  :' + name;
+          break;
+        case style_trpg_studio:
+          var data_name = {};
+          data_name["text"] = name;
+          data_name["panel"] = false;
+          data_name["number"] = value;
+          data_skill["forms"].push(data_name);
+          break;
+      }
     }
   }
   
@@ -288,19 +357,41 @@ function get_data_battle(style, data, offset, end){
     return null;
   }
   
-  var data_battle = XmlService.createElement('data')
-  .setAttribute("name", "戦闘");
+  var data_battle = null;
+  switch(style){
+    case style_udonarium:
+      data_battle = XmlService.createElement('data')
+      .setAttribute("name", "戦闘");
+      break;
+    case style_trpg_studio:
+      data_battle = {};
+      data_battle["type"] = "charaSheetInputCloneText";
+      data_battle["title"] = "戦闘";
+      data_battle["forms"] = [];
+      break;
+  }
   //戦闘
   for(var i=offset;i<end;i++){
     var name = data[i][0];
     var value = data[i][1];
     if(name!="" && name!="回避"){
-      var data_name = XmlService.createElement('data')
-      .setAttribute("name", name);
-      data_name.setText(value);
-      data_battle.addContent(data_name);
-      if(name="ダメージボーナス"){
-        db = value;
+      switch(style){
+        case style_udonarium:
+          var data_name = XmlService.createElement('data')
+          .setAttribute("name", name);
+          data_name.setText(value);
+          data_battle.addContent(data_name);
+          if(name="ダメージボーナス"){
+            db = value;
+          }
+          break;
+        case style_trpg_studio:
+          var data_name = {};
+          data_name["text1"] = name;
+          data_name["panel"] = false;
+          data_name["text2"] = value;
+          data_battle["forms"].push(data_name);
+          break;
       }
     }
   }
@@ -314,19 +405,41 @@ function get_data_weapon(style, data, offset, end){
     return null;
   }
   chat += '\n\n//-----武器威力判定\n'
-  var data_weapon = XmlService.createElement('data')
-  .setAttribute("name", "武器");
+  var data_weapon = null;
+  switch(style){
+    case style_udonarium:
+      data_weapon = XmlService.createElement('data')
+      .setAttribute("name", "武器");
+      break;
+    case style_trpg_studio:
+      data_weapon = {};
+      data_weapon["type"] = "charaSheetInputCloneText";
+      data_weapon["title"] = "武器";
+      data_weapon["forms"] = [];
+      break;
+  }
   //武器
   for(var i=offset;i<end;i++){
     var name = data[i][0];
     var value = data[i][4];
     if(name!=""){
-      var value_str = value.toString().replace('\+DB', db);
-      var data_name = XmlService.createElement('data')
-      .setAttribute("name", name);
-      data_name.setText(value_str);
-      data_weapon.addContent(data_name);
-      chat += '\n' + value_str + ' :' + name;
+      switch(style){
+        case style_udonarium:
+          var value_str = value.toString().replace('\+DB', db);
+          var data_name = XmlService.createElement('data')
+          .setAttribute("name", name);
+          data_name.setText(value_str);
+          data_weapon.addContent(data_name);
+          chat += '\n' + value_str + ' :' + name;
+          break;
+        case style_trpg_studio:
+          var data_name = {};
+          data_name["text1"] = name;
+          data_name["panel"] = false;
+          data_name["text2"] = value;
+          data_weapon["forms"].push(data_name);
+          break;
+      }
     }
   }
   
@@ -339,15 +452,23 @@ function get_data_bs(style, data, offset, end){
     return null;
   }
   
-  var data_bs = XmlService.createElement('data')
-  .setAttribute("name", "バックストーリー");
+  var data_bs = null;
+  switch(style){
+    case style_udonarium:
+      data_bs = XmlService.createElement('data')
+      .setAttribute("name", "バックストーリー");
+      break;
+    case style_trpg_studio:
+      data_bs = {};
+      data_bs["type"] = "charaSheetInputCloneText";
+      data_bs["title"] = "バックストーリー";
+      data_bs["forms"] = [];
+      break;
+  }
   //バックストーリー
   for(var i=offset;i<end;i++){
     var name = data[i][0];
     if(!(name=="")){
-      var data_name = XmlService.createElement('data')
-      .setAttribute("type", "note")
-      .setAttribute("name", name);
       var value = ""
       for(var j = 1;data[i][j] != "";j++){
         if(value == ""){
@@ -356,8 +477,22 @@ function get_data_bs(style, data, offset, end){
           value = value + "\n" + data[i][j];
         }
       }
-      data_name.setText(value);
-      data_bs.addContent(data_name);
+      switch(style){
+        case style_udonarium:
+          var data_name = XmlService.createElement('data')
+          .setAttribute("type", "note")
+          .setAttribute("name", name);
+          data_name.setText(value);
+          data_bs.addContent(data_name);
+          break;
+      case style_trpg_studio:
+          var data_name = {};
+          data_name["text1"] = name;
+          data_name["panel"] = false;
+          data_name["text2"] = value;
+          data_bs["forms"].push(data_name);
+          break;
+      }
     }
   }
   
@@ -370,18 +505,40 @@ function get_data_equip(style, data, offset, end){
     return null;
   }
   
-  var data_equip = XmlService.createElement('data')
-  .setAttribute("name", "装備品と所持品");
+  var data_equip = null;
+  switch(style){
+    case style_udonarium:
+      data_equip = XmlService.createElement('data')
+      .setAttribute("name", "装備品と所持品");
+      break;
+    case style_trpg_studio:
+      data_equip = {};
+      data_equip["type"] = "charaSheetInputCloneText";
+      data_equip["title"] = "装備品と所持品";
+      data_equip["forms"] = [];
+      break;
+  }
   //装備品と所持品
   for(var i=offset;i<end;i++){
     var name = data[i][0];
     var value = data[i][1];
     if(!(name=="")){
-      var data_name = XmlService.createElement('data')
-      .setAttribute("type", "note")
-      .setAttribute("name", name);
-      data_name.setText(value);
-      data_equip.addContent(data_name);
+      switch(style){
+        case style_udonarium:
+          var data_name = XmlService.createElement('data')
+          .setAttribute("type", "note")
+          .setAttribute("name", name);
+          data_name.setText(value);
+          data_equip.addContent(data_name);
+          break;
+       case style_trpg_studio:
+          var data_name = {};
+          data_name["text1"] = name;
+          data_name["panel"] = false;
+          data_name["text2"] = value;
+          data_equip["forms"].push(data_name);
+          break;
+      }
     }
   }
   
@@ -394,22 +551,48 @@ function get_data_money(style, data, offset){
     return null;
   }
   
-  var data_money = XmlService.createElement('data')
-  .setAttribute("name", "収入と財産");
+  var data_money = null;
+  switch(style){
+    case style_udonarium:
+      data_money = XmlService.createElement('data')
+      .setAttribute("name", "収入と財産");
+      break;
+    case style_trpg_studio:
+      data_money = {};
+      data_money["type"] = "charaSheetInputCloneText";
+      data_money["title"] = "収入と財産";
+      data_money["forms"] = [];
+      break;
+  }
   //収入と財産
   for(var i=offset;i<data.length;i++){
     var name = data[i][0];
     var value_d = data[i][1];
     var value_y = data[i][2];
     if(!(name=="")){
-      var data_name_d = XmlService.createElement('data')
-      .setAttribute("name", name + ' (ドル)');
-      data_name_d.setText(value_d);
-      data_money.addContent(data_name_d);
-      var data_name_y = XmlService.createElement('data')
-      .setAttribute("name", name + ' (円)');
-      data_name_y.setText(value_y);
-      data_money.addContent(data_name_y);
+      switch(style){
+        case style_udonarium:
+          var data_name_d = XmlService.createElement('data')
+          .setAttribute("name", name + ' (ドル)');
+          data_name_d.setText(value_d);
+          data_money.addContent(data_name_d);
+          var data_name_y = XmlService.createElement('data')
+          .setAttribute("name", name + ' (円)');
+          data_name_y.setText(value_y);
+          data_money.addContent(data_name_y);
+          break;
+        case style_trpg_studio:
+          var data_name = {};
+          data_name["text1"] = name + ' (ドル)';
+          data_name["panel"] = false;
+          data_name["text2"] = value_d;
+          data_money["forms"].push(data_name);
+          data_name["text1"] = name + ' (円)';
+          data_name["panel"] = false;
+          data_name["text2"] = value_y;
+          data_money["forms"].push(data_name);
+          break;
+      }
     }
   }
   
